@@ -10,19 +10,31 @@ import re
 def clean_yards_column(yards_str):
     """Clean the Yards column by removing commas and converting to int"""
     if isinstance(yards_str, str):
+        # Remove commas and convert to int
         return int(yards_str.replace(',', ''))
     return yards_str
 
 
 def prepare_features(df):
+    """
+    Prepare features for the model
 
+    Args:
+        df: DataFrame with raw data
+
+    Returns:
+        DataFrame with cleaned and engineered features
+    """
     df = df.copy()
 
+    # Clean the Yards column
     df['Yards'] = df['Yards'].apply(clean_yards_column)
 
     # Create feature columns for modeling
     features_df = pd.DataFrame({
         'year': df['Year'],
+        'age': df['Age'],
+        'off_line_rank': df['off_line_rank'],
         'yards': df['Yards'],
         'touchdowns': df['TD'],
         'games_vs_top_ten': df['games_vs_top_ten'],
@@ -35,6 +47,11 @@ def prepare_features(df):
     features_df['yards_per_td'] = features_df['yards'] / (features_df['touchdowns'] + 1)  # +1 to avoid division by zero
     features_df['tough_schedule_ratio'] = features_df['games_vs_top_ten'] / (
                 features_df['games_vs_top_ten'] + features_df['games_vs_bottom_ten'])
+
+    # Age-related features
+    features_df['is_prime_age'] = ((features_df['age'] >= 24) & (features_df['age'] <= 28)).astype(
+        int)  # RB prime years
+    features_df['is_rookie_contract'] = (features_df['age'] <= 25).astype(int)  # Likely on rookie deal
 
     return features_df
 
@@ -58,12 +75,16 @@ def train_fpts_model(csv_file_path):
     print("Preparing features...")
     features_df = prepare_features(df)
 
-    # Define feature columns (excluding target) - only features available for prediction
+    # Define feature columns (excluding target) - features available for prediction
     feature_columns = [
+        'age',
+        'off_line_rank',
         'games_vs_top_ten',
         'games_vs_bottom_ten',
         'opponent_avg_madden_rating',
-        'tough_schedule_ratio'
+        'tough_schedule_ratio',
+        'is_prime_age',
+        'is_rookie_contract'
     ]
 
     # Prepare X (features) and y (target)
@@ -140,17 +161,36 @@ def train_fpts_model(csv_file_path):
     }
 
 
-def predict_fpts(model_data, games_vs_top_ten, games_vs_bottom_ten, opponent_avg_madden_rating):
+def predict_fpts(model_data, age, off_line_rank, games_vs_top_ten, games_vs_bottom_ten, opponent_avg_madden_rating):
+    """
+    Make a single FPTS prediction
 
+    Args:
+        model_data: Dictionary returned from train_fpts_model
+        age: Player age
+        off_line_rank: Offensive line ranking (1-32, lower is better)
+        games_vs_top_ten: Games against top 10 defenses
+        games_vs_bottom_ten: Games against bottom 10 defenses
+        opponent_avg_madden_rating: Average opponent Madden rating
 
+    Returns:
+        Predicted FPTS
+    """
+    # Calculate engineered features
     tough_schedule_ratio = games_vs_top_ten / (games_vs_top_ten + games_vs_bottom_ten)
+    is_prime_age = 1 if 24 <= age <= 28 else 0
+    is_rookie_contract = 1 if age <= 25 else 0
 
-
+    # Create feature array
     features = np.array([[
+        age,
+        off_line_rank,
         games_vs_top_ten,
         games_vs_bottom_ten,
         opponent_avg_madden_rating,
-        tough_schedule_ratio
+        tough_schedule_ratio,
+        is_prime_age,
+        is_rookie_contract
     ]])
 
     # Scale features
@@ -163,15 +203,29 @@ def predict_fpts(model_data, games_vs_top_ten, games_vs_bottom_ten, opponent_avg
 
 
 if __name__ == "__main__":
-    csv_path = "top_20_with_defense_metrics.csv"
+    # Train the model
+    csv_path = "yearly_top_20.csv"
     model_data = train_fpts_model(csv_path)
 
     print("\n=== Example Prediction ===")
-    # Example prediction using only available features
+    # Example prediction for a 25-year-old RB with good offensive line
     predicted_fpts = predict_fpts(
         model_data,
+        age=25,
+        off_line_rank=8,  # Good offensive line
         games_vs_top_ten=4,
         games_vs_bottom_ten=6,
         opponent_avg_madden_rating=79.0
     )
-    print(f"Predicted FPTS: {predicted_fpts}")
+    print(f"Predicted FPTS for 25yr old RB with rank 8 O-line: {predicted_fpts}")
+
+    # Compare with older RB and worse O-line
+    predicted_fpts_old = predict_fpts(
+        model_data,
+        age=30,
+        off_line_rank=20,  # Poor offensive line
+        games_vs_top_ten=4,
+        games_vs_bottom_ten=6,
+        opponent_avg_madden_rating=79.0
+    )
+    print(f"Predicted FPTS for 30yr old RB with rank 20 O-line: {predicted_fpts_old}")
