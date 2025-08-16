@@ -1,12 +1,9 @@
-# main.py
 from fastapi import FastAPI
-
 import pandas as pd
 from dotenv import load_dotenv
 from calculate_def_rankings import add_defensive_rankings
-from database import get_snowflake_connection
-from api import (
-    # auth_router,
+from src.database.snowflake import get_snowflake_connection  # Updated
+from src.api import (                                        # Updated
     train_router,
 )
 load_dotenv()

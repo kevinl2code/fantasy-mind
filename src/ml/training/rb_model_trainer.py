@@ -1,9 +1,9 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from ml.models.running_back_predictor import RunningBackPredictor
-from ml.preprocessing.data_cleaner import DataCleaner
-from ml.preprocessing.rb_feature_engineer import RBFeatureEngineer
-from ml.utils.model_storage import ModelStorage
+from src.ml.models.running_back_predictor import RunningBackPredictor
+from src.ml.preprocessing.data_cleaner import DataCleaner
+from src.ml.preprocessing.rb_feature_engineer import RBFeatureEngineer
+from src.ml.utils.model_storage import ModelStorage
 
 
 class RBModelTrainer:

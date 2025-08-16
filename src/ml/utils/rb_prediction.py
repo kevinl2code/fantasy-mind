@@ -1,6 +1,6 @@
 # ml/utils/prediction.py
 import numpy as np
-from ml.preprocessing.rb_feature_engineer import RBFeatureEngineer
+from src.ml.preprocessing.rb_feature_engineer import RBFeatureEngineer
 
 
 def predict_rb_fpts(model, age, off_line_rank, games_vs_top_ten, games_vs_bottom_ten, opponent_avg_madden_rating):

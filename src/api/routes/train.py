@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from ml.training.rb_model_trainer import RBModelTrainer
-from ml.utils.model_storage import ModelStorage
-from ml.utils.rb_prediction import predict_rb_fpts
+from src.ml.training.rb_model_trainer import RBModelTrainer
+from src.ml.utils.model_storage import ModelStorage
+from src.ml.utils.rb_prediction import predict_rb_fpts
 
 router = APIRouter()
 
