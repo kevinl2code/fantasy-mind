@@ -30,15 +30,15 @@ class RBFeatureEngineer:
 
         # Create feature columns for modeling
         features_df = pd.DataFrame({
-            'year': df['Year'],
-            'age': df['Age'],
+            'year': df['year'],
+            'age': df['age'],
             'off_line_rank': df['off_line_rank'],
-            'yards': df['Yards'],
-            'touchdowns': df['TD'],
+            'yards': df['yards'],
+            'touchdowns': df['td'],
             'games_vs_top_ten': df['games_vs_top_ten'],
             'games_vs_bottom_ten': df['games_vs_bottom_ten'],
             'opponent_avg_madden_rating': df['opponent_avg_madden_rating'],
-            'fpts': df['FPTS']  # target variable
+            'fpts': df['fpts']  # target variable
         })
 
         # Create additional features

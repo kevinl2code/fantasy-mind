@@ -162,3 +162,6 @@ class RBModelTrainer:
             return None
         finally:
             conn.close()
+
+trainer = RBModelTrainer()
+results = trainer.train_rb_model()

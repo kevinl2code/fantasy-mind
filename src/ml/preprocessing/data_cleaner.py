@@ -1,4 +1,3 @@
-
 class DataCleaner:
     @staticmethod
     def clean_yards_column(yards_str):
@@ -11,5 +10,10 @@ class DataCleaner:
     def clean_dataframe(self, df):
         """Clean the entire dataframe"""
         df = df.copy()
-        df['Yards'] = df['Yards'].apply(self.clean_yards_column)
+
+        # Convert column names to lowercase for consistency
+        df.columns = df.columns.str.lower()
+
+        # Now clean the yards column (lowercase)
+        df['yards'] = df['yards'].apply(self.clean_yards_column)
         return df
