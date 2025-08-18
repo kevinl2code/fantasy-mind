@@ -1,9 +1,11 @@
+# src/ml/training/rb_model_trainer.py
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from src.ml.models.running_back_predictor import RunningBackPredictor
 from src.ml.preprocessing.data_cleaner import DataCleaner
 from src.ml.preprocessing.rb_feature_engineer import RBFeatureEngineer
 from src.ml.utils.model_storage import ModelStorage
+from src.database.snowflake import get_snowflake_connection
 
 
 class RBModelTrainer:
@@ -12,25 +14,23 @@ class RBModelTrainer:
         self.rb_feature_engineer = RBFeatureEngineer()
         self.model_storage = ModelStorage()
 
-    def train_rb_model(self, csv_file_path=None, df=None):
+    def train_rb_model(self, df=None):
         """
         Train a Running Back FPTS prediction model
 
         Args:
-            csv_file_path: Path to the CSV file (optional if df provided)
-            df: DataFrame with data (optional if csv_file_path provided)
+            df: DataFrame with data (optional, if not provided loads from Snowflake)
 
         Returns:
             Dictionary containing model results and performance metrics
         """
         # Load data
         print("Loading data...")
+
         if df is not None:
             data_df = df.copy()
-        elif csv_file_path:
-            data_df = pd.read_csv(csv_file_path)
         else:
-            raise ValueError("Either csv_file_path or df must be provided")
+            data_df = self._load_from_snowflake()
 
         print(f"Loaded {len(data_df)} rows")
 
@@ -97,3 +97,68 @@ class RBModelTrainer:
             'feature_importance': feature_importance,
             'test_data': (X_test, y_test, test_results['predictions'])
         }
+
+    def _load_from_snowflake(self):
+        """Load training data from Snowflake table"""
+        print("Connecting to Snowflake...")
+        conn = get_snowflake_connection()
+
+        try:
+            query = """
+            SELECT 
+                YEAR,
+                FFRANK,
+                NAME,
+                AGE,
+                TEAM,
+                TEAMID,
+                OFF_LINE_RANK,
+                YARDS,
+                TD,
+                FPTS,
+                GAMES_VS_TOP_TEN,
+                GAMES_VS_BOTTOM_TEN,
+                OPPONENT_AVG_MADDEN_RATING
+            FROM FANTASY_MIND_DATA.STAGING.YEARLY_TOP_20_RB
+            ORDER BY YEAR, FFRANK
+            """
+
+            print("Executing query...")
+            df = pd.read_sql(query, conn)
+            print(f"Successfully loaded {len(df)} rows from Snowflake")
+
+            return df
+
+        except Exception as e:
+            print(f"Error loading from Snowflake: {e}")
+            raise
+        finally:
+            conn.close()
+            print("Snowflake connection closed")
+
+    def get_data_summary(self):
+        """Get a summary of the available training data"""
+        try:
+            conn = get_snowflake_connection()
+
+            summary_query = """
+            SELECT 
+                COUNT(*) as total_records,
+                MIN(YEAR) as earliest_year,
+                MAX(YEAR) as latest_year,
+                COUNT(DISTINCT NAME) as unique_players,
+                COUNT(DISTINCT TEAM) as unique_teams,
+                ROUND(AVG(FPTS), 2) as avg_fpts,
+                ROUND(MIN(FPTS), 2) as min_fpts,
+                ROUND(MAX(FPTS), 2) as max_fpts
+            FROM FANTASY_MIND_DATA.STAGING.YEARLY_TOP_20_RB
+            """
+
+            summary_df = pd.read_sql(summary_query, conn)
+            return summary_df.to_dict('records')[0]
+
+        except Exception as e:
+            print(f"Error getting data summary: {e}")
+            return None
+        finally:
+            conn.close()

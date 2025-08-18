@@ -7,27 +7,27 @@ from src.ml.utils.rb_prediction import predict_rb_fpts
 router = APIRouter()
 
 
-@router.post("/train/rb", response_model=TrainRBResponse)
-async def train_rb_model(csv_path: str = "yearly_top_20.csv"):
+# api/routes/train.py
+@router.post("/rb", response_model=TrainRBResponse)
+async def train_rb_model():
     try:
         trainer = RBModelTrainer()
-        results = trainer.train_rb_model(csv_file_path=csv_path)
+        results = trainer.train_rb_model()  # Always uses Snowflake
 
         # Save model
         storage = ModelStorage()
         model_path = storage.save_rb_model(results['model'])
 
-        return {
-            "status": "success",
-            "model_type": "running_back",
-            "model_path": model_path,
-            "train_r2": results['train_r2'],
-            "test_r2": results['test_r2'],
-            "feature_importance": results['feature_importance']
-        }
+        return TrainRBResponse(
+            status="success",
+            model_type="running_back",
+            model_path=model_path,
+            train_r2=results['train_r2'],
+            test_r2=results['test_r2'],
+            feature_importance=results['feature_importance']
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/predict/rb", response_model=PredictRBResponse)
 async def predict_rb_fantasy_points(
